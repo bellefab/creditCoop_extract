@@ -30,8 +30,10 @@ def serialize_objects(obj):
 
     if isinstance(obj, Mouvement):
         return {
-            'data': obj.date,
-            'montant': obj.montant
+            'date': obj.date,
+            'montant': obj.montant,
+            'credit': obj.credit # ,
+            # TODO 'message': obj.message
         }
     raise TypeError(str(obj) + ' is not JSON serializable')
 
@@ -145,6 +147,7 @@ def treat_tables_ccFormat(tables):
                     mvnt.montant = td.iat[row, debit_col]
                 mvnt_list.append(mvnt)
                 nb_mvnt = nb_mvnt + 1
+                # Set message !!!
 
     print("---------------------------------\n\n")
     print("------------nb_mvnt =%d---------------------\n\n" % (nb_mvnt))
@@ -153,7 +156,15 @@ def treat_tables_ccFormat(tables):
     check_soldes(solde_precedent, solde_nouveau, mvnt_list)
 
     with open('data.json', 'w') as f:
-        json.dump(mvnt_list, f, default=serialize_objects)
+        solde = {}
+        solde['solde_precedent_date'] = '0'
+        solde['solde_precedent_montant'] = solde_nouveau
+        solde['solde_nouveau_date'] = '0'
+        solde['solde_nouveau_montant'] = solde_nouveau
+        data_all = {}
+        data_all['solde'] = solde
+        data_all['operations'] = mvnt_list
+        json.dump(data_all, f, default=serialize_objects)
 
 
 def usage():
