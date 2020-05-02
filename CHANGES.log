@@ -1,0 +1,6 @@
+
+Version V0.1
+
+Succeed to extract PDF info and put all operations in JSON file with previous solde and new solde.
+
+plot_cc_operations.py plots the operations and then plot the evolution starting with previous solde.
