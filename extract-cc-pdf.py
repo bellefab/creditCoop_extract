@@ -6,6 +6,8 @@ import getopt
 import camelot
 
 
+debug = False
+
 # Fields are :  date, message, credit, montant
 class Mouvement:
     """
@@ -23,6 +25,13 @@ class Mouvement:
     def __repr__(self):
         return ("date=%s montant=%s message=%s" % (self.date, self.montant, self.message))
         # str("date=%s montant=%s" % (self.date, self.montant))
+
+def print_debug(s):
+    if debug:
+        print(s)
+    else:
+        pass
+
 
 
 def serialize_objects(obj):
@@ -49,7 +58,7 @@ def check_soldes(prec, nouv, mvnt_list):
             current = current + float(m)
         else:
             current = current - float(m)
-    print("Check says old=%s new=%s, computed=%f" % (prec, nouv, current))
+    print_debug("Check says old=%s new=%s, computed=%f" % (prec, nouv, current))
 
 
 def print_debug1(tables):
@@ -57,22 +66,22 @@ def print_debug1(tables):
 
     """
     # number of tables extracted
-    print("Total tables extracted:", tables.n)
+    print_debug("Total tables extracted: %d" % (tables.n))
 
     # print the  tables as Pandas DataFrame
     for i in range(tables.n):
-        print(tables[i].df)
-    print("---------------------------------\n\n")
+        print_debug(tables[i].df)
+    print_debug("---------------------------------\n\n")
 
     # let's say we ignore first and last tables
     #
     if tables.n <= 1:
-        print("Error, only %d table detected\n" % (tables.n))
+        print_debug("Error, only %d table detected\n" % (tables.n))
 
     for i in range(1, tables.n-1):
-        print(tables[i].df)
+        print_debug(tables[i].df)
 
-    print("---------------------------------\n\n")
+    print_debug("---------------------------------\n\n")
 
 
 def treat_tables_ccFormat(tables):
@@ -97,13 +106,35 @@ def treat_tables_ccFormat(tables):
     solde_nouveau = 0
     nb_mvnt = 0
 
-    for i in range(1, tables.n-1):
+    for i in range(1, tables.n):
         td = tables[i].df
         rows_nb = td.shape[0]
         cols_nb = td.shape[1]
         in_table = False
         message_multLine = False
         in_ope = False
+        # Test if tables is to analyse
+        # considered to analyse if exist row with col0 ==  "Date" and exists cols "Crédit","Débit"
+        table_to_analyse = False
+        for row in range(rows_nb):
+            if td.iat[row, 0] == "Date" and \
+             ("Détail des opérations" in td.iat[row, 1]):
+                # TODO use regexp for 'Détail des opérations', should be better .. (?)
+                # Find col for credit and for debit
+                is_col_credit = False
+                is_col_debit = False
+                for col in range(2, cols_nb):
+                    if "Crédit" in td.iat[row, col]:
+                        is_col_credit = True
+                    if "Débit" in td.iat[row, col]:
+                        is_col_debit = True
+                if is_col_credit and is_col_debit:
+                    table_to_analyse = True
+                    break
+
+        if not table_to_analyse:
+            continue
+
         # for all lines
         for row in range(rows_nb):
             if td.iat[row, 0] == "Date" and \
@@ -115,13 +146,13 @@ def treat_tables_ccFormat(tables):
                         credit_col = col
                     if "Débit" in td.iat[row, col]:
                         debit_col = col
-                print("Crédit at %d Débit at %d \n" % (credit_col, debit_col))
+                print_debug("Crédit at %d Débit at %d \n" % (credit_col, debit_col))
                 in_table = True
             elif not in_table:
                 continue
             elif td.iat[row, 0] == "" and \
               ("SOLDE PRECEDENT" in td.iat[row, 1]):
-                print("SOLDE PRECEDENT FOUND\n")
+                print_debug("SOLDE PRECEDENT FOUND\n")
                 in_ope = False
                 if td.iat[row, credit_col] != "":
                     solde_precedent = td.iat[row, credit_col]
@@ -130,7 +161,7 @@ def treat_tables_ccFormat(tables):
                 # TODO
             elif td.iat[row, 0] == "" and \
              ("NOUVEAU SOLDE" in td.iat[row, 1]):
-                print("NOUVEAU SOLDE FOUND\n")
+                print_debug("NOUVEAU SOLDE FOUND\n")
                 in_ope = False
                 if td.iat[row, credit_col] != "":
                     solde_nouveau = td.iat[row, credit_col]
@@ -162,9 +193,9 @@ def treat_tables_ccFormat(tables):
                 if row < (rows_nb-1) and td.iat[row+1, 0] != "":
                     message_multLine = False
 
-    print("---------------------------------\n\n")
-    print("------------nb_mvnt =%d---------------------\n\n" % (nb_mvnt))
-    print(mvnt_list)
+    print_debug("---------------------------------\n\n")
+    print_debug("------------nb_mvnt =%d---------------------\n\n" % (nb_mvnt))
+    print_debug(mvnt_list)
 
     check_soldes(solde_precedent, solde_nouveau, mvnt_list)
 
@@ -185,6 +216,17 @@ def write_file(solde, mvnt_list, type, outputfile):
         json.dump(data_all, f, default=serialize_objects)
 
 
+def extract_write(inputfile, outputfile):
+    tables = camelot.read_pdf(inputfile, pages='all', flavor='stream')
+    print_debug1(tables)
+    solde, mvnt_list = treat_tables_ccFormat(tables)
+    # Check that solde nouveau and solde precedent are present, if not, WARNING
+    if solde['solde_precedent_montant'] == 0:
+        print("WARNING : PARSING FAILED TO FIND SOLDE PRECEDENT => YOU HAVE TO FIX JSON FILE !!!")
+    if solde['solde_nouveau_montant'] == 0:
+        print("WARNING : PARSING FAILED TO FIND SOLDE NOUVEAU => YOU HAVE TO FIX JSON FILE !!!")
+    write_file(solde, mvnt_list, type, outputfile)
+
 def usage():
     print(" CLI programm to extract Credit Cooperatif Bank data from PDF.\n \
     Extraction is writen in JSON.\n \
@@ -192,7 +234,12 @@ def usage():
      Extract data from inputfile.pdf and write them in type (json) format \
      in outputfile.json\n \
      Files is a file containing path to several PDF file to treat in batch. \n \
-     In this case output name are input file name + a json suffix.")
+     In this case output name are input file name + a json suffix.\n \
+     -i/--ifile \n \
+     -o/--ofile \n \
+     -f/--files \n \
+     -h/--help prints this message \n \
+     -d/--debug add debug prints")
 
 
 if __name__ == "__main__":
@@ -200,23 +247,22 @@ if __name__ == "__main__":
     outputfile = ""
     files = ""
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hi:o:t:f:", ["help", "ifile=", "ofile=", "type=", "files="])
+        opts, args = getopt.getopt(sys.argv[1:],
+                    "dhi:o:t:f:",
+                    ["debug", "help", "ifile=", "ofile=", "type=", "files="])
     except getopt.GetoptError:
-        print("Error in command line.")
         usage()
         sys.exit(2)
     for opt, arg in opts:
-        print(opt)
-        print(arg)
         if opt == "-h":
             usage()
             sys.exit()
+        elif opt in ("-d", "--debug"):
+            debug = True
         elif opt in ("-f", "--files"):
             files = arg
         elif opt in ("-i", "--ifile"):
             # PDF file to extract tables from
-            #file = "/home/fbelle-local/Téléchargements/RELEVES_0902258281_20191101.pdf"
-            #file = "RELEVE.pdf"
             inputfile = arg
         elif opt in ("-o", "--ofile"):
             outputfile = arg
@@ -239,16 +285,10 @@ if __name__ == "__main__":
         with open(files, 'r') as f:
             for line in f:
                 clean_line = line.strip()
-                print("--"+clean_line+"--")
+                print_debug("--"+clean_line+"--")
                 if clean_line != "":
                     inputfile = clean_line
                     outputfile = clean_line+".json"
-                    tables = camelot.read_pdf(inputfile, pages='all', flavor='stream')
-                    solde, mvnt_list = treat_tables_ccFormat(tables)
-                    write_file(solde, mvnt_list, type, outputfile)
+                    extract_write(inputfile, outputfile)
     else:
-        # extract all the tables in the PDF file
-        tables = camelot.read_pdf(inputfile, pages='all', flavor='stream')
-        print_debug1(tables)
-        solde, mvnt_list = treat_tables_ccFormat(tables)
-        write_file(solde, mvnt_list, type, outputfile)
+        extract_write(inputfile, outputfile)
