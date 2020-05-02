@@ -188,16 +188,19 @@ def write_file(solde, mvnt_list, type, outputfile):
 def usage():
     print(" CLI programm to extract Credit Cooperatif Bank data from PDF.\n \
     Extraction is writen in JSON.\n \
-     Usage : $ extract-cc-pdf -i  <inputfile.pdf> -t <type> -o <outputfile.json>\n \
+     Usage : $ extract-cc-pdf -i  <inputfile.pdf>/ -f <files> -t <type> -o <outputfile.json>\n \
      Extract data from inputfile.pdf and write them in type (json) format \
-     in outputfile.json")
+     in outputfile.json\n \
+     Files is a file containing path to several PDF file to treat in batch. \n \
+     In this case output name are input file name + a json suffix.")
 
 
 if __name__ == "__main__":
     inputfile = ""
     outputfile = ""
+    files = ""
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hi:o:t:", ["help", "ifile=", "ofile=", "type="])
+        opts, args = getopt.getopt(sys.argv[1:], "hi:o:t:f:", ["help", "ifile=", "ofile=", "type=", "files="])
     except getopt.GetoptError:
         print("Error in command line.")
         usage()
@@ -208,6 +211,8 @@ if __name__ == "__main__":
         if opt == "-h":
             usage()
             sys.exit()
+        elif opt in ("-f", "--files"):
+            files = arg
         elif opt in ("-i", "--ifile"):
             # PDF file to extract tables from
             #file = "/home/fbelle-local/Téléchargements/RELEVES_0902258281_20191101.pdf"
@@ -220,14 +225,30 @@ if __name__ == "__main__":
     if args or len(opts) > 3:
         usage()
         sys.exit()
-    if inputfile == "" or outputfile == "":
+    if files != "":
+        if inputfile != "" or outputfile != "":
+            usage()
+            sys.exit()
+    elif inputfile == "" or outputfile == "":
         usage()
         sys.exit()
     # TODO check that is a file, we can open, that is a PDF
 
-    # extract all the tables in the PDF file
-    tables = camelot.read_pdf(inputfile, pages='all', flavor='stream')
-
-    print_debug1(tables)
-    solde, mvnt_list = treat_tables_ccFormat(tables)
-    write_file(solde, mvnt_list, type, outputfile)
+    if files != "":
+        # loop po n files path contained in Files
+        with open(files, 'r') as f:
+            for line in f:
+                clean_line = line.strip()
+                print("--"+clean_line+"--")
+                if clean_line != "":
+                    inputfile = clean_line
+                    outputfile = clean_line+".json"
+                    tables = camelot.read_pdf(inputfile, pages='all', flavor='stream')
+                    solde, mvnt_list = treat_tables_ccFormat(tables)
+                    write_file(solde, mvnt_list, type, outputfile)
+    else:
+        # extract all the tables in the PDF file
+        tables = camelot.read_pdf(inputfile, pages='all', flavor='stream')
+        print_debug1(tables)
+        solde, mvnt_list = treat_tables_ccFormat(tables)
+        write_file(solde, mvnt_list, type, outputfile)
