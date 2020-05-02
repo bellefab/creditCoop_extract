@@ -2,9 +2,7 @@
 import sys
 import matplotlib.pyplot as plt
 import json
-import locale
 
-locale.setlocale(locale.LC_ALL, 'fr_FR.UTF8')
 
 
 def price_to_float(price_str):
