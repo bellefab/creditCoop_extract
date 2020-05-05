@@ -7,8 +7,9 @@ import camelot
 
 debug = False
 # For CreditCooperatif releve since 06 2018
-# use the following table_region
-# it allows to avoid to analyse Page Headers as tables.
+# use the following table_region.
+# It allows to avoid to analyse Page Headers as tables.
+# Coordinates have been obtained using ghostview viewer 'gv'.
 cc_table_regions_062018 = "135,760,780,135"
 
 # Fields are :  date, message, credit, montant
@@ -77,12 +78,7 @@ def print_debug1(tables):
         print_debug(tables[i].df)
     print_debug("---------------------------------\n\n")
 
-    # let's say we ignore first and last tables
-    #
-    if tables.n <= 1:
-        print_debug("Error, only %d table detected\n" % (tables.n))
-
-    for i in range(1, tables.n-1):
+    for i in range(tables.n):
         print_debug(tables[i].df)
 
     print_debug("---------------------------------\n\n")
@@ -110,7 +106,7 @@ def treat_tables_ccFormat(tables):
     solde_nouveau = 0
     nb_mvnt = 0
 
-    for i in range(0, tables.n):
+    for i in range(tables.n):
         td = tables[i].df
         rows_nb = td.shape[0]
         cols_nb = td.shape[1]
@@ -165,7 +161,8 @@ def treat_tables_ccFormat(tables):
                     solde_precedent = td.iat[row, credit_col]
                 else:
                     solde_precedent = td.iat[row, debit_col]
-                # TODO
+                # TODO get date
+
             elif td.iat[row, 0] == "" and \
              ("NOUVEAU SOLDE" in td.iat[row, 1]):
                 print_debug("NOUVEAU SOLDE FOUND\n")
@@ -174,7 +171,7 @@ def treat_tables_ccFormat(tables):
                     solde_nouveau = td.iat[row, credit_col]
                 else:
                     solde_nouveau = td.iat[row, debit_col]
-                # TODO
+                # TODO get date
             elif td.iat[row, 0] != "":
                 # new mvnt
                 in_ope = True
