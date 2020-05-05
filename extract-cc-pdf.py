@@ -11,6 +11,7 @@ debug = False
 # It allows to avoid to analyse Page Headers as tables.
 # Coordinates have been obtained using ghostview viewer 'gv'.
 cc_table_regions_062018 = "135,760,780,135"
+cc_columns_sep_062018 = "170,430,480"
 
 # Fields are :  date, message, credit, montant
 class Mouvement:
@@ -172,6 +173,8 @@ def treat_tables_ccFormat(tables):
                 else:
                     solde_nouveau = td.iat[row, debit_col]
                 # TODO get date
+                # After this line, no more in Operations table
+                in_table = False
             elif td.iat[row, 0] != "":
                 # new mvnt
                 in_ope = True
@@ -222,7 +225,9 @@ def write_file(solde, mvnt_list, type, outputfile):
 
 def extract_write(inputfile, outputfile):
     tables = camelot.read_pdf(inputfile, pages='all', flavor='stream',
-                             table_regions=[cc_table_regions_062018])
+                             table_regions=[cc_table_regions_062018],
+                             columns=[cc_columns_sep_062018],
+                             split_text = True)
     print_debug1(tables)
     solde, mvnt_list = treat_tables_ccFormat(tables)
     # Check that solde nouveau and solde precedent are present, if not, WARNING
