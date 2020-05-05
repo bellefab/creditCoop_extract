@@ -5,8 +5,11 @@ import sys
 import getopt
 import camelot
 
-
 debug = False
+# For CreditCooperatif releve since 06 2018
+# use the following table_region
+# it allows to avoid to analyse Page Headers as tables.
+cc_table_regions_062018 = "135,760,780,135"
 
 # Fields are :  date, message, credit, montant
 class Mouvement:
@@ -23,15 +26,15 @@ class Mouvement:
         pass
 
     def __repr__(self):
-        return ("date=%s montant=%s message=%s" % (self.date, self.montant, self.message))
-        # str("date=%s montant=%s" % (self.date, self.montant))
+        return ("date=%s montant=%s message=%s" %
+                (self.date, self.montant, self.message))
+
 
 def print_debug(s):
     if debug:
         print(s)
     else:
         pass
-
 
 
 def serialize_objects(obj):
@@ -58,12 +61,13 @@ def check_soldes(prec, nouv, mvnt_list):
             current = current + float(m)
         else:
             current = current - float(m)
-    print_debug("Check says old=%s new=%s, computed=%f" % (prec, nouv, current))
+    print_debug("Check says old=%s new=%s, computed=%f" %
+                (prec, nouv, current))
 
 
 def print_debug1(tables):
     """
-
+    Very verbose print
     """
     # number of tables extracted
     print_debug("Total tables extracted: %d" % (tables.n))
@@ -86,19 +90,19 @@ def print_debug1(tables):
 
 def treat_tables_ccFormat(tables):
     """
-    # Prendre 1 table, avancer jusqu'a ligne où :
-    # - col0 contient 'Date'
-    # - col1 contient 'Détail des opérations ...'
-    #
-    # voir quelle num de col est "débit"
-    # voir quel numéro de col est "crédit"
+    Prendre 1 table, avancer jusqu'a ligne où :
+     - col0 contient 'Date'
+     - col1 contient 'Détail des opérations ...'
 
-    # Ensuite pour chaque ligne si :
-    #  col1 contient "SOLDE PRECEDENT ..." -> enregistrer date et solde précédent
-    #  col1 contient  "NOUVEAU SOLDE ..." ->  enregistrer date et solde
-    # sinon si col0 a une date, alors déterminer ligneN, la ligne de la prochaine date
-    #  creer un Mouvement (date, detal , credit/debit, montant)
-    # avec details pouvant être pris sur pls lignes.
+     voir quelle num de col est "débit"
+     voir quel numéro de col est "crédit"
+
+     Ensuite pour chaque ligne si :
+      col1 contient "SOLDE PRECEDENT .." -> enregistrer date et solde précédent
+      col1 contient  "NOUVEAU SOLDE .." ->  enregistrer date et solde
+     sinon si col0 a une date, alors déterminer ligneN, la ligne de
+     la prochaine date creer un Mouvement (date, detal , credit/debit, montant)
+     avec details pouvant être pris sur pls lignes.
     """
 
     mvnt_list = []  # liste vide
@@ -106,7 +110,7 @@ def treat_tables_ccFormat(tables):
     solde_nouveau = 0
     nb_mvnt = 0
 
-    for i in range(1, tables.n):
+    for i in range(0, tables.n):
         td = tables[i].df
         rows_nb = td.shape[0]
         cols_nb = td.shape[1]
@@ -114,12 +118,14 @@ def treat_tables_ccFormat(tables):
         message_multLine = False
         in_ope = False
         # Test if tables is to analyse
-        # considered to analyse if exist row with col0 ==  "Date" and exists cols "Crédit","Débit"
+        # considered to analyse if exist row with col0 ==  "Date"
+        #  and exists cols "Crédit","Débit"
         table_to_analyse = False
         for row in range(rows_nb):
             if td.iat[row, 0] == "Date" and \
              ("Détail des opérations" in td.iat[row, 1]):
-                # TODO use regexp for 'Détail des opérations', should be better .. (?)
+                # TODO use regexp for 'Détail des opérations',
+                # should be better .. (?)
                 # Find col for credit and for debit
                 is_col_credit = False
                 is_col_debit = False
@@ -139,9 +145,10 @@ def treat_tables_ccFormat(tables):
         for row in range(rows_nb):
             if td.iat[row, 0] == "Date" and \
              ("Détail des opérations" in td.iat[row, 1]):
-                # TODO use regexp for 'Détail des opérations', should be better .. (?)
+                # TODO use regexp for 'Détail des opérations',
+                #  should be better .. (?)
                 # Find col for credit and for debit
-                for col in range (2, cols_nb):
+                for col in range(2, cols_nb):
                     if "Crédit" in td.iat[row, col]:
                         credit_col = col
                     if "Débit" in td.iat[row, col]:
@@ -217,14 +224,17 @@ def write_file(solde, mvnt_list, type, outputfile):
 
 
 def extract_write(inputfile, outputfile):
-    tables = camelot.read_pdf(inputfile, pages='all', flavor='stream')
+    tables = camelot.read_pdf(inputfile, pages='all', flavor='stream',
+                             table_regions=[cc_table_regions_062018])
     print_debug1(tables)
     solde, mvnt_list = treat_tables_ccFormat(tables)
     # Check that solde nouveau and solde precedent are present, if not, WARNING
     if solde['solde_precedent_montant'] == 0:
-        print("WARNING : PARSING FAILED TO FIND SOLDE PRECEDENT => YOU HAVE TO FIX JSON FILE !!!")
+        print("WARNING : PARSING FAILED TO FIND SOLDE PRECEDENT => \
+        YOU HAVE TO FIX JSON FILE !!!")
     if solde['solde_nouveau_montant'] == 0:
-        print("WARNING : PARSING FAILED TO FIND SOLDE NOUVEAU => YOU HAVE TO FIX JSON FILE !!!")
+        print("WARNING : PARSING FAILED TO FIND SOLDE NOUVEAU => \
+        YOU HAVE TO FIX JSON FILE !!!")
     write_file(solde, mvnt_list, type, outputfile)
 
 def usage():
@@ -233,7 +243,7 @@ def usage():
      Usage : $ extract-cc-pdf -i  <inputfile.pdf>/ -f <files> -t <type> -o <outputfile.json>\n \
      Extract data from inputfile.pdf and write them in type (json) format \
      in outputfile.json\n \
-     Files is a file containing path to several PDF file to treat in batch. \n \
+     Files is a file containing path to several PDF file to treat in batch.\n \
      In this case output name are input file name + a json suffix.\n \
      -i/--ifile \n \
      -o/--ofile \n \
