@@ -13,6 +13,15 @@ debug = False
 cc_table_regions_062018 = "135,760,780,135"
 cc_columns_sep_062018 = "170,430,480"
 
+# For format of Credit Cooperatif relevés before 06 2018
+# define regions to search for table, do not consider
+# page header, in this format there is the same big page header
+# on each page.
+# Define columns or lago will not be able to split lines in columns
+# and all rows will have a uniq value in first column.
+cc_table_regions_before_062018 = "40,560,550,130"
+cc_columns_sep_before_062018 = "80,260,350,430"
+
 # Fields are :  date, message, credit, montant
 class Mouvement:
     """
