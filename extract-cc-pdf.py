@@ -3,6 +3,7 @@
 import json
 import sys
 import getopt
+sys.path.insert(1, '../camelot')
 import camelot
 
 debug = False
@@ -233,9 +234,13 @@ def write_file(solde, mvnt_list, type, outputfile):
 
 
 def extract_write(inputfile, outputfile):
+    # tables = camelot.read_pdf(inputfile, pages='all', flavor='stream',
+    #                          table_regions=[cc_table_regions_062018],
+    #                          columns=[cc_columns_sep_062018],
+    #                          split_text = True)
     tables = camelot.read_pdf(inputfile, pages='all', flavor='stream',
-                             table_regions=[cc_table_regions_062018],
-                             columns=[cc_columns_sep_062018],
+                             table_regions=[cc_table_regions_before_062018],
+                             columns=[cc_columns_sep_before_062018],
                              split_text = True)
     print_debug1(tables)
     solde, mvnt_list = treat_tables_ccFormat(tables)
