@@ -3,7 +3,7 @@ import sys
 import matplotlib.pyplot as plt
 import json
 import getopt
-
+from datetime import datetime
 debug = False
 
 
@@ -33,6 +33,27 @@ def usage():
      ")
 
 
+def build_timerange(inputfile):
+    with open(inputfile) as json_file:
+        d = json.load(json_file)
+        d_ope = d['operations']
+        start_time = d_ope[0]['date']
+        end_time = d_ope[len(d_ope)-1]['date']
+        return datetime.strptime(start_time, "%d/%m"), datetime.strptime(end_time, "%d/%m")
+
+
+def build_timeline(inputfile, ):
+    with open(inputfile) as json_file:
+        d = json.load(json_file)
+        d_ope = d['operations']
+        ope_timeline = []
+        for elt in d_ope:
+            # transform date in abs
+            date = elt['date']
+            ope_timeline.append(datetime.strptime(date, "%d/%m"))
+        return ope_timeline
+
+
 def build_montant_list(inputfile):
     with open(inputfile) as json_file:
         # TODO check that is a file, we can open, that is a JSON with
@@ -44,7 +65,7 @@ def build_montant_list(inputfile):
 
         # get the list of montant
         d_ope = d['operations']
-        # dope is an array of bank operations
+        # d_ope is an array of bank operations
         montant_list = []
         for elt in d_ope:
             m = elt['montant']
@@ -104,26 +125,36 @@ if __name__ == "__main__":
 
     if files != "":
         # Treat all lines to build globals montant_list and m_all
-
+        ope_timeline = []
+        montant_timeline = []
         # loop on files path contained in Files
         with open(files, 'r') as f:
-            for line in f:
+            inputfile = ""
+            for idx, line in enumerate(f):
                 clean_line = line.strip()
                 print_debug("--"+clean_line+"--")
                 if clean_line != "":
                     inputfile = clean_line
+                    start_time, end_time = build_timerange(inputfile)
+                    montant_timeline.append(start_time)
+                    ope_timeline += build_timeline(inputfile)
+                    montant_timeline += build_timeline(inputfile)
+                    montant_timeline.append(end_time)
                     m1, m1_all = build_montant_list(inputfile)
                     montant_list = montant_list + m1
                     m_all = m_all + m1_all
     else:
+        start_time, end_time = build_timerange(inputfile)
+        ope_timeline = build_timeline(inputfile)
         montant_list, m_all = build_montant_list(inputfile)
-
-    print_debug(montant_list)
-    plt.plot(montant_list)
+        montant_timeline = [start_time]
+        montant_timeline += ope_timeline
+        montant_timeline.append(end_time)
+    plt.plot(ope_timeline, montant_list)
     plt.ylabel('Montant en euros')
     plt.show()
 
     print_debug(m_all)
-    plt.plot(m_all)
+    plt.plot(montant_timeline, m_all)
     plt.ylabel('Montant en euros')
     plt.show()
