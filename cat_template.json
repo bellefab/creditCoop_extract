@@ -1,0 +1,13 @@
+#
+# element is {'name':'CAT_NAME', 'selector':[LIST_STRING_SELECTOR], 'color':"COLOR_NAME"}
+# LIST_STRING_SELECTOR is a list of strings that start an operation description
+# the STRING_SELECTOR allow to classify the operation
+# Copy-Paste following json content and adapt it to your needs.
+{
+"categories": [
+{"name":"Alimentation", "selector": ["CB PICARD SA"], "color":"black"},
+{"name":"AMAZON", "selector": ["CB AMAZON"], "color":"orange"},
+{"name":"Liquide", "selector": ["RETRAIT DAB"], "color":"orange"},
+{"name":"Autre", "selector": ["*"], "color":"pink"}
+  ]
+}
