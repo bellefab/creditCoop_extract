@@ -277,6 +277,7 @@ if __name__ == "__main__":
                     "dhi:o:t:f:",
                     ["debug", "help", "ifile=", "ofile=", "type=", "files="])
     except getopt.GetoptError:
+        print("Error on opts")
         usage()
         sys.exit(2)
     for opt, arg in opts:
@@ -295,17 +296,20 @@ if __name__ == "__main__":
         elif opt in ("-t", "--type"):
             type = "json"  # TODO
     if args or len(opts) > 3:
+        print_debug("opts > 3")
         usage()
         sys.exit()
     if files != "":
         if inputfile != "" or outputfile != "":
+            print("With files option, do not put inputfile or outputfile options")
+            print("Output will be generated next to files declares in files with .json suffix")
             usage()
             sys.exit()
     elif inputfile == "" or outputfile == "":
         usage()
         sys.exit()
     # TODO check that is a file, we can open, that is a PDF
-
+    print_debug("FILES ="+files)
     if files != "":
         # loop po n files path contained in Files
         with open(files, 'r') as f:
